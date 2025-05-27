@@ -79,7 +79,7 @@ pub fn role_has_many_users_role_is_emergency_pause_admin(e: Env){
 
 /** 
  *  RULE: 
- *      role.has_many_user => get/set_role_address reverts
+ *      role.has_many_user => get_role_safe reverts
  *  Tested: No
  *  Bugs: No
  *  Note: 
@@ -87,13 +87,13 @@ pub fn role_has_many_users_role_is_emergency_pause_admin(e: Env){
 */
 #[rule]
 pub fn role_has_many_users_get_role_safe_reverts(){
-    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL };
+    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL }.as_ref().unwrap();
     let role = nondet_role();
     clog!(role.to_string());
 
     cvlr_assume!(role.has_many_users());
 
-    acc_ctrl.as_ref().unwrap().get_role_safe(&role);
+    acc_ctrl.get_role_safe(&role);
 
     cvlr_assert!(false); //shouldnt reach
 
@@ -101,23 +101,23 @@ pub fn role_has_many_users_get_role_safe_reverts(){
 
 /** 
  *  RULE: 
- *      role.as_symbol doesnt work for admin
- *  Tested: No
- *  Bugs: No
+ *      role.as_symbol reverts for admin
+ *  Tested: https://prover.certora.com/output/7145022/e4af4ddd67674695897f92ddb7009138/?anonymousKey=4cafd86165667bd2cb43bdb20fd6bd4056fe2e7c&params=%7B%221%22%3A%7B%22index%22%3A0%2C%22ruleCounterExamples%22%3A%5B%7B%22name%22%3A%22rule_output_1.json%22%2C%22selectedRepresentation%22%3A%7B%22label%22%3A%22PRETTY%22%2C%22value%22%3A0%7D%2C%22callResolutionSingleFilter%22%3A%22%22%2C%22variablesFilter%22%3A%22%22%2C%22callTraceFilter%22%3A%22%22%2C%22variablesOpenItems%22%3A%5Btrue%2Ctrue%5D%2C%22callTraceCollapsed%22%3Atrue%2C%22rightSidePanelCollapsed%22%3Afalse%2C%22rightSideTab%22%3A%22%22%2C%22callResolutionSingleCollapsed%22%3Atrue%2C%22viewStorage%22%3Atrue%2C%22variablesExpandedArray%22%3A%22%22%2C%22expandedArray%22%3A%22%22%2C%22orderVars%22%3A%5B%22%22%2C%22%22%2C0%5D%2C%22orderParams%22%3A%5B%22%22%2C%22%22%2C0%5D%2C%22scrollNode%22%3A0%2C%22currentPoint%22%3A0%2C%22trackingChildren%22%3A%5B%5D%2C%22trackingParents%22%3A%5B%5D%2C%22trackingOnly%22%3Afalse%2C%22highlightOnly%22%3Afalse%2C%22filterPosition%22%3A0%2C%22singleCallResolutionOpen%22%3A%5B%5D%2C%22snap_drop_1%22%3Anull%2C%22snap_drop_2%22%3Anull%2C%22snap_filter%22%3A%22%22%7D%5D%7D%7D&generalState=%7B%22fileViewOpen%22%3Afalse%2C%22fileViewCollapsed%22%3Atrue%2C%22mainTreeViewCollapsed%22%3Atrue%2C%22callTraceClosed%22%3Afalse%2C%22mainSideNavItem%22%3A%22rules%22%2C%22globalResSelected%22%3Afalse%2C%22isSideBarCollapsed%22%3Afalse%2C%22isRightSideBarCollapsed%22%3Atrue%2C%22selectedFile%22%3A%7B%7D%2C%22fileViewFilter%22%3A%22%22%2C%22mainTreeViewFilter%22%3A%22%22%2C%22contractsFilter%22%3A%22%22%2C%22globalCallResolutionFilter%22%3A%22%22%2C%22currentRuleUiId%22%3A1%2C%22counterExamplePos%22%3A1%2C%22expandedKeysState%22%3A%22%22%2C%22expandedFilesState%22%3A%5B%5D%2C%22outlinedfilterShared%22%3A%22000000000%22%7D
+ *  Bugs: rule passes, therefore, from_symbol is unreachable
  *  Note: 
  *       
 */
 #[rule]
-pub fn role_as_symbol_reverts_for_admin(e: Env){
+pub fn role_from_symbol_reverts_for_admin(e: Env){
 
-    Role::Admin.as_symbol(&e);
+    Role::from_symbol(&e, Role::Admin.as_symbol(&e));
 
     cvlr_assert!(false); //shouldnt reach
 }
 
 /** 
  *  RULE: 
- *      role.has_many_user => get/set_role_address reverts
+ *      role.has_many_user => get_role_address reverts
  *  Tested: No
  *  Bugs: No
  *  Note: 
@@ -125,20 +125,20 @@ pub fn role_as_symbol_reverts_for_admin(e: Env){
 */
 #[rule]
 pub fn role_has_many_users_get_role_reverts(){
-    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL };
+    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL }.as_ref().unwrap();
     let role = nondet_role();
     clog!(role.to_string());
 
     cvlr_assume!(role.has_many_users());
 
-    acc_ctrl.as_ref().unwrap().get_role(&role);
+    acc_ctrl.get_role(&role);
     cvlr_assert!(false); //shouldnt reach
 
 }
 
 /** 
  *  RULE: 
- *      role.has_many_user => get/set_role_address reverts
+ *      role.has_many_user => set_role_address reverts
  *  Tested: No
  *  Bugs: No
  *  Note: 
@@ -146,13 +146,13 @@ pub fn role_has_many_users_get_role_reverts(){
 */
 #[rule]
 pub fn role_has_many_users_set_role_address_reverts(){
-    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL };
+    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL }.as_ref().unwrap();
     let role = nondet_role();
     clog!(role.to_string());
 
     cvlr_assume!(role.has_many_users());
 
-    acc_ctrl.as_ref().unwrap().set_role_address(&role, &nondet_address());
+    acc_ctrl.set_role_address(&role, &nondet_address());
 
     cvlr_assert!(false); //shouldnt reach
 
@@ -160,7 +160,7 @@ pub fn role_has_many_users_set_role_address_reverts(){
 
 /** 
  *  RULE: 
- *      !role.has_many_user => get/set_role_address reverts
+ *      !role.has_many_user => set_role_addresses reverts
  *  Tested: No
  *  Bugs: No
  *  Note: 
@@ -168,13 +168,13 @@ pub fn role_has_many_users_set_role_address_reverts(){
 */
 #[rule]
 pub fn role_not_has_many_users_set_role_addresses_reverts(){
-    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL };
+    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL }.as_ref().unwrap();
     let role = nondet_role();
     clog!(role.to_string());
    
     cvlr_assume!(!role.has_many_users());
     
-    acc_ctrl.as_ref().unwrap().set_role_addresses(&role, &nondet_vec());
+    acc_ctrl.set_role_addresses(&role, &nondet_vec());
 
     cvlr_assert!(false); //shouldnt reach
 
@@ -182,7 +182,7 @@ pub fn role_not_has_many_users_set_role_addresses_reverts(){
 
 /** 
  *  RULE: 
- *      !role.has_many_user => get/set_role_address reverts
+ *      !role.has_many_user => get_role_addresses reverts
  *  Tested: No
  *  Bugs: No
  *  Note: 
@@ -190,13 +190,13 @@ pub fn role_not_has_many_users_set_role_addresses_reverts(){
 */
 #[rule]
 pub fn role_not_has_many_users_get_role_addresses_reverts(){
-    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL };
+    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL }.as_ref().unwrap();
     let role = nondet_role();
     clog!(role.to_string());
    
     cvlr_assume!(!role.has_many_users());
     
-    acc_ctrl.as_ref().unwrap().get_role_addresses(&role);
+    acc_ctrl.get_role_addresses(&role);
 
     cvlr_assert!(false); //shouldnt reach
 
@@ -212,15 +212,15 @@ pub fn role_not_has_many_users_get_role_addresses_reverts(){
 */
 #[rule]
 pub fn future_add_changed_deadline_changed(e: Env){
-    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL };
+    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL }.as_ref().unwrap();
     let role =  nondet_role();
-    let future_before = acc_ctrl.as_ref().unwrap().get_future_address(&role) ;
-    let deadline_before = acc_ctrl.as_ref().unwrap().get_transfer_ownership_deadline(&role);
+    let future_before = acc_ctrl.get_future_address(&role) ;
+    let deadline_before = acc_ctrl.get_transfer_ownership_deadline(&role);
 
     nondet_func(e.clone());
 
-    let future_after = acc_ctrl.as_ref().unwrap().get_future_address(&role) ;
-    let deadline_after = acc_ctrl.as_ref().unwrap().get_transfer_ownership_deadline(&role);
+    let future_after = acc_ctrl.get_future_address(&role) ;
+    let deadline_after = acc_ctrl.get_transfer_ownership_deadline(&role);
 
     cvlr_assume!(future_before != future_after);
 
@@ -237,14 +237,14 @@ pub fn future_add_changed_deadline_changed(e: Env){
  *       
 */
 #[rule]
-pub fn future_add_changed_commit_called(e: Env){
-    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL };
+pub fn future_add_changed_due_to_commit(e: Env){
+    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL }.as_ref().unwrap();
     let role =  nondet_role();
-    let future_before = acc_ctrl.as_ref().unwrap().get_future_address(&role) ;
+    let future_before = acc_ctrl.get_future_address(&role) ;
 
     let action = nondet_func(e.clone());
 
-    let future_after = acc_ctrl.as_ref().unwrap().get_future_address(&role) ;
+    let future_after = acc_ctrl.get_future_address(&role) ;
 
     cvlr_assume!(future_before != future_after);
 
@@ -262,13 +262,13 @@ pub fn future_add_changed_commit_called(e: Env){
 */
 #[rule]
 pub fn deadline_changed_to_nonzero_commit_or_put_transfer_deadline(e: Env){
-    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL };
+    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL }.as_ref().unwrap();
     let role =  nondet_role();
-    let deadline_before = acc_ctrl.as_ref().unwrap().get_transfer_ownership_deadline(&role);
+    let deadline_before = acc_ctrl.get_transfer_ownership_deadline(&role);
 
     let action = nondet_func(e.clone());
 
-    let deadline_after = acc_ctrl.as_ref().unwrap().get_transfer_ownership_deadline(&role);
+    let deadline_after = acc_ctrl.get_transfer_ownership_deadline(&role);
 
     cvlr_assume!(deadline_before != deadline_after && deadline_after>0);
 
@@ -286,13 +286,13 @@ pub fn deadline_changed_to_nonzero_commit_or_put_transfer_deadline(e: Env){
 */
 #[rule]
 pub fn deadline_changed_to_zero_revert_apply_or_put_transfer_deadline(e: Env){
-    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL };
+    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL }.as_ref().unwrap();
     let role =  nondet_role();
-    let deadline_before = acc_ctrl.as_ref().unwrap().get_transfer_ownership_deadline(&role);
+    let deadline_before = acc_ctrl.get_transfer_ownership_deadline(&role);
 
     let action = nondet_func(e.clone());
 
-    let deadline_after = acc_ctrl.as_ref().unwrap().get_transfer_ownership_deadline(&role);
+    let deadline_after = acc_ctrl.get_transfer_ownership_deadline(&role);
 
     cvlr_assume!(deadline_before != deadline_after && deadline_after==0);
 
@@ -301,6 +301,7 @@ pub fn deadline_changed_to_zero_revert_apply_or_put_transfer_deadline(e: Env){
                     action == Action::RevertTransferOwnership);
 
 }
+
 
 /** 
  *  RULE: -- 
@@ -311,14 +312,14 @@ pub fn deadline_changed_to_zero_revert_apply_or_put_transfer_deadline(e: Env){
  *       
 */
 #[rule]
-pub fn deadline_valid_states(e: Env){
-    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL };
+pub fn deadline_valid_states_access_control(e: Env){
+    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL }.as_ref().unwrap();
     let role =  nondet_role();
-    let deadline_before = acc_ctrl.as_ref().unwrap().get_transfer_ownership_deadline(&role);
+    let deadline_before = acc_ctrl.get_transfer_ownership_deadline(&role);
 
     nondet_func(e.clone());
 
-    let deadline_after = acc_ctrl.as_ref().unwrap().get_transfer_ownership_deadline(&role);
+    let deadline_after = acc_ctrl.get_transfer_ownership_deadline(&role);
 
     cvlr_assume!(deadline_before != deadline_after && deadline_after==0);
 
@@ -328,20 +329,20 @@ pub fn deadline_valid_states(e: Env){
 
 /** 
  *  RULE: -- 
- *      cant commit if deadline not zero
+ *      Deadline != 0 => commit reverts
  *  Tested: No
  *  Bugs: No
  *  Note: 
  *       
 */
 #[rule]
-pub fn cant_commit_before_deadline(){
-    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL };
+pub fn cant_commit_if_deadline_nonzero(){
+    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL }.as_ref().unwrap();
     let role =  nondet_role();
-    let deadline = acc_ctrl.as_ref().unwrap().get_transfer_ownership_deadline(&role);
+    let deadline = acc_ctrl.get_transfer_ownership_deadline(&role);
     cvlr_assume!(deadline != 0);
     
-    acc_ctrl.as_ref().unwrap().commit_transfer_ownership(&role, &nondet_address());
+    acc_ctrl.commit_transfer_ownership(&role, &nondet_address());
 
     cvlr_assert!(false); // shoudlnt reach
 
@@ -349,7 +350,7 @@ pub fn cant_commit_before_deadline(){
 
 /** 
  *  RULE: -- 
- *      cant apply until now() >= deadline assuming not the first apply
+ *      Now() < deadline or role address is none => apply reverts
  *  Tested: No
  *  Bugs: No
  *  Note: 
@@ -357,16 +358,17 @@ pub fn cant_commit_before_deadline(){
 */
 #[rule]
 pub fn cant_apply_before_deadline(e: Env){
-    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL };
+    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL }.as_ref().unwrap();
     let role =  nondet_role();
-    let deadline = acc_ctrl.as_ref().unwrap().get_transfer_ownership_deadline(&role);
+    let deadline = acc_ctrl.get_transfer_ownership_deadline(&role);
     cvlr_assume!(e.ledger().timestamp() < deadline && get_role_safe_address(role.clone()).is_some());
     clog!(role.to_string());
     clog!(e.ledger().timestamp());
     clog!(deadline);
-    let address = acc_ctrl.as_ref().unwrap().apply_transfer_ownership(&role);
+
+    let address = acc_ctrl.apply_transfer_ownership(&role);
     clog!(cvlr_soroban::Addr(&address));
-    
+
 
     cvlr_assert!(false); // shoudlnt reach
 
@@ -375,7 +377,7 @@ pub fn cant_apply_before_deadline(e: Env){
 
 /** 
  *  RULE: -- 
- *      role changed => new address == future address 
+ *      role address changed => new address == future address 
  *  Tested: No
  *  Bugs: No
  *  Note: 
@@ -383,17 +385,17 @@ pub fn cant_apply_before_deadline(e: Env){
 */
 #[rule]
 pub fn role_changed_future_address_is_new_address(e: Env){
-    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL };
+    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL }.as_ref().unwrap();
     let role =  nondet_role();
-    let address_before = acc_ctrl.as_ref().unwrap().get_role_safe(&role);
-    let future_add = acc_ctrl.as_ref().unwrap().get_future_address(&role);
+    let address_before = acc_ctrl.get_role_safe(&role);
+    let future_add = acc_ctrl.get_future_address(&role);
 
 
     let action  = nondet_func(e.clone());
     cvlr_assume!(   action != Action::SetRoleAddress ||
                     action != Action::SetRoleAddress);
 
-    let address_after= acc_ctrl.as_ref().unwrap().get_role_safe(&role);
+    let address_after= acc_ctrl.get_role_safe(&role);
 
     cvlr_assume!(address_before != address_after);
 
@@ -411,13 +413,13 @@ pub fn role_changed_future_address_is_new_address(e: Env){
 */
 #[rule]
 pub fn role_cant_change_to_none(e: Env){
-    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL };
+    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL }.as_ref().unwrap();
     let role =  nondet_role();
-    let address_before = acc_ctrl.as_ref().unwrap().get_role_safe(&role);
+    let address_before = acc_ctrl.get_role_safe(&role);
 
     nondet_func(e.clone());
 
-    let address_after= acc_ctrl.as_ref().unwrap().get_role_safe(&role);
+    let address_after= acc_ctrl.get_role_safe(&role);
 
     cvlr_assume!(address_before != address_after);
 
@@ -435,20 +437,20 @@ pub fn role_cant_change_to_none(e: Env){
 */
 #[rule]
 pub fn role_changed_is_admin_emergency_admin(e: Env){
-    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL };
+    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL }.as_ref().unwrap();
     let role =  nondet_role();
-    let address_before = acc_ctrl.as_ref().unwrap().get_role_safe(&role);
+    let address_before = acc_ctrl.get_role_safe(&role);
     clog!(role.to_string());
 
     let action = nondet_func(e.clone());
-    cvlr_assume!(   action != Action::SetRoleAddress ||
-                action != Action::SetRoleAddress);
 
-    let address_after= acc_ctrl.as_ref().unwrap().get_role_safe(&role);
+    let address_after= acc_ctrl.get_role_safe(&role);
 
     cvlr_assume!(address_before != address_after);
 
-    cvlr_assert!( role.as_symbol(&e) == Role::Admin.as_symbol(&e) || role.as_symbol(&e) == Role::EmergencyAdmin.as_symbol(&e));
+    cvlr_assert!(   action != Action::SetRoleAddress || 
+                    action != Action::SetRoleAddresses ||
+                    role.as_symbol(&e) == Role::Admin.as_symbol(&e) || role.as_symbol(&e) == Role::EmergencyAdmin.as_symbol(&e));
 
 }
 
@@ -462,20 +464,35 @@ pub fn role_changed_is_admin_emergency_admin(e: Env){
 */
 #[rule]
 pub fn role_changed_is_transfer_delay(e: Env){
-    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL };
+    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL }.as_ref().unwrap();
     let role =  nondet_role();
-    let address_before = acc_ctrl.as_ref().unwrap().get_role_safe(&role);
+    let address_before = acc_ctrl.get_role_safe(&role);
 
     let action = nondet_func(e.clone());
-    cvlr_assume!(   action != Action::SetRoleAddress ||
-                action != Action::SetRoleAddress);
 
-    let address_after= acc_ctrl.as_ref().unwrap().get_role_safe(&role);
+    let address_after= acc_ctrl.get_role_safe(&role);
 
     cvlr_assume!(address_before != address_after);
 
-    cvlr_assert!( role.is_transfer_delayed());
+    cvlr_assert!(   action != Action::SetRoleAddress || 
+                    action != Action::SetRoleAddresses ||
+                    role.is_transfer_delayed());
 
+}
+
+/** 
+ *  RULE: 
+ *      role.transfer delay => !role.has_many_users
+ *  Tested: Yes.  
+ *  Bugs: No
+ *  Note: validated by changing admin has many users
+*/
+#[rule]
+pub fn role_has_transfer_delay_has_one_user(){
+    let role = nondet_role();
+
+    cvlr_assume!(role.is_transfer_delayed());
+    cvlr_assert!(!role.has_many_users());
 }
 
 /** 
@@ -488,13 +505,13 @@ pub fn role_changed_is_transfer_delay(e: Env){
 */
 #[rule]
 pub fn role_changed_due_to_apply_or_set_role(e: Env){
-    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL };
+    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL }.as_ref().unwrap();
     let role =  nondet_role();
-    let address_before = acc_ctrl.as_ref().unwrap().get_role_safe(&role);
+    let address_before = acc_ctrl.get_role_safe(&role);
 
     let action = nondet_func(e.clone());
 
-    let address_after= acc_ctrl.as_ref().unwrap().get_role_safe(&role);
+    let address_after= acc_ctrl.get_role_safe(&role);
 
     cvlr_assume!(address_before != address_after);
 
@@ -512,23 +529,22 @@ pub fn role_changed_due_to_apply_or_set_role(e: Env){
 */
 #[rule]
 pub fn one_role_at_a_time(e: Env){
-    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL };
+    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL }.as_ref().unwrap();
     let role =  nondet_role();
     let other_role = nondet_role();
 
     cvlr_assume!(role.as_symbol(&e) != other_role.as_symbol(&e));
 
-    let address_before = acc_ctrl.as_ref().unwrap().get_role_safe(&role);
-    let other_address_before = acc_ctrl.as_ref().unwrap().get_role_safe(&role); 
+    let address_before = acc_ctrl.get_role_safe(&role);
+    let other_address_before = acc_ctrl.get_role_safe(&other_role); 
 
     nondet_func(e.clone());
 
-    let address_after= acc_ctrl.as_ref().unwrap().get_role_safe(&role);
-    let other_address_after = acc_ctrl.as_ref().unwrap().get_role_safe(&role);
+    let address_after= acc_ctrl.get_role_safe(&role);
+    let other_address_after = acc_ctrl.get_role_safe(&other_role);
 
     cvlr_assume!(address_before != address_after);
     cvlr_assert!(other_address_before == other_address_after);
-
 
 }
 
@@ -542,13 +558,13 @@ pub fn one_role_at_a_time(e: Env){
 */
 #[rule]
 pub fn admin_can_transfer_his_role(e: Env){
-    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL };
+    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL }.as_ref().unwrap();
     let role =  Role::Admin;
-    let address_before = acc_ctrl.as_ref().unwrap().get_role_safe(&role);
+    let address_before = acc_ctrl.get_role_safe(&role);
 
     nondet_func(e.clone());
 
-    let address_after= acc_ctrl.as_ref().unwrap().get_role_safe(&role);
+    let address_after= acc_ctrl.get_role_safe(&role);
 
     cvlr_satisfy!(address_before != address_after);
 
@@ -564,13 +580,13 @@ pub fn admin_can_transfer_his_role(e: Env){
 */
 #[rule]
 pub fn emergency_admin_can_transfer_his_role(e: Env){
-    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL };
+    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL }.as_ref().unwrap();
     let role =  Role::EmergencyAdmin;
-    let address_before = acc_ctrl.as_ref().unwrap().get_role_safe(&role);
+    let address_before = acc_ctrl.get_role_safe(&role);
 
     nondet_func(e.clone());
 
-    let address_after= acc_ctrl.as_ref().unwrap().get_role_safe(&role);
+    let address_after= acc_ctrl.get_role_safe(&role);
 
     cvlr_satisfy!(address_before != address_after);
 
@@ -617,10 +633,10 @@ pub fn emergency_admin_can_transfer_his_role(e: Env){
 */
  #[rule]
  pub fn get_role_safe_integrity(e: Env){
-    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL };
+    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL }.as_ref().unwrap();
     let role =  nondet_role();
-    let role_key = acc_ctrl.as_ref().unwrap().get_key(&role);
-    let address = acc_ctrl.as_ref().unwrap().get_role_safe(&role);
+    let role_key = acc_ctrl.get_key(&role);
+    let address = acc_ctrl.get_role_safe(&role);
     clog!(role.to_string());
 
     cvlr_assert!(address == e.storage().instance().get(&role_key)); 
@@ -636,10 +652,10 @@ pub fn emergency_admin_can_transfer_his_role(e: Env){
 */
   #[rule]
  pub fn get_role_integrity(e: Env){
-    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL };
+    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL }.as_ref().unwrap();
     let role =  nondet_role();
-    let role_key = acc_ctrl.as_ref().unwrap().get_key(&role);
-    let address = acc_ctrl.as_ref().unwrap().get_role(&role);
+    let role_key = acc_ctrl.get_key(&role);
+    let address = acc_ctrl.get_role(&role);
     clog!(role.to_string());
     
     match e.storage().instance().get::<DataKey, Address>(&role_key){
@@ -835,7 +851,7 @@ pub fn revert_transfer_ownership_integrity_access_control() {
 }
 
 #[rule]
-pub fn get_future_address_integrity(e: Env) {
+pub fn get_future_address_integrity_access_control(e: Env) {
     let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL }.as_ref().unwrap();
     let role = nondet_role();
     let future_role_key = acc_ctrl.get_future_key(&role);
@@ -861,18 +877,5 @@ pub fn get_transfer_ownership_deadline_integrity(e: Env) {
     let deadline_key = acc_ctrl.get_future_deadline_key(&role);
     let get_deadline = acc_ctrl.get_transfer_ownership_deadline(&role);
 
-    cvlr_assert!(get_deadline == e.storage().instance().get::<DataKey, u64>(&deadline_key).unwrap());
+    cvlr_assert!(get_deadline == e.storage().instance().get::<DataKey, u64>(&deadline_key).unwrap()     );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,9 +1,14 @@
 use soroban_sdk::{contracttype, BytesN, Env};
 use utils::bump::bump_instance;
 
+/**
+ * Asaf:
+ * Changing visibility for spec access
+ */
+//enum DataKey {
 #[derive(Clone)]
 #[contracttype]
-enum DataKey {
+pub enum DataKey {
     UpgradeDeadline,
     FutureWASM,
 }

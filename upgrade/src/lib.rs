@@ -4,7 +4,11 @@ mod constants;
 mod errors;
 pub mod events;
 pub mod interface;
-mod storage;
+/**
+ * Changing this module to be public, to access deadline and future wasm
+ */
+//mod storage;
+pub mod storage;
 
 use crate::constants::UPGRADE_DELAY;
 use crate::errors::Error;

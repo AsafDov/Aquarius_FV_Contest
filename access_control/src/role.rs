@@ -1,5 +1,5 @@
 use crate::errors::AccessControlError;
-use soroban_sdk::{panic_with_error, Env, Symbol};
+use soroban_sdk::{panic_with_error, Env, String, Symbol};
 
 #[derive(Clone)]
 pub enum Role {
@@ -12,9 +12,14 @@ pub enum Role {
 }
 
 impl Role {
-    pub(crate) fn has_many_users(&self) -> bool {
+    /**
+     * Asaf:
+     * Removed the "crate" restrictor to gain access from fees_collector 
+     */
+    //pub(crate) fn has_many_users(&self) -> bool {
+    pub fn has_many_users(&self) -> bool {
         match self {
-            Role::Admin => false,
+            Role::Admin => false, 
             Role::EmergencyAdmin => false,
             Role::RewardsAdmin => false,
             Role::OperationsAdmin => false,
@@ -23,7 +28,12 @@ impl Role {
         }
     }
 
-    pub(crate) fn is_transfer_delayed(&self) -> bool {
+    /**
+     * Asaf:
+     * Removed the "crate" restrictor to gain access from fees_collector 
+     */
+    //pub(crate) fn is_transfer_delayed(&self) -> bool {
+    pub fn is_transfer_delayed(&self) -> bool {
         match self {
             Role::Admin => true,
             Role::EmergencyAdmin => true,
@@ -31,6 +41,22 @@ impl Role {
             Role::OperationsAdmin => false,
             Role::PauseAdmin => false,
             Role::EmergencyPauseAdmin => false,
+        }
+    }
+
+    /**
+     * Asaf:
+     * added to_string method for clog!
+     */
+    pub fn to_string(&self) -> &'static str {
+        match self {
+            Role::Admin => "Admin",
+            Role::EmergencyAdmin => "EmergencyAdmin",
+            Role::RewardsAdmin => "RewardsAdmin",
+            Role::OperationsAdmin => "OperationsAdmin",
+            Role::PauseAdmin => "PauseAdmin",
+            Role::EmergencyPauseAdmin => "EmergencyPauseAdmin",
+            _ => "None"
         }
     }
 }

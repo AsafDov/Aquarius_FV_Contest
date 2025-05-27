@@ -7,6 +7,13 @@ pub mod events;
 pub mod interface;
 pub mod management;
 pub mod role;
-mod storage;
+/**
+ * Asaf:
+ * Changed storage to pub to access private functunality.
+ * Shouldnt reduce points as per discord help-desk post 
+ * link: https://discord.com/channels/795999272293236746/1372555565271617567
+ */
+//mod storage;
+pub mod storage;
 pub mod transfer;
 pub mod utils;

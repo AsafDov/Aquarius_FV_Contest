@@ -6,10 +6,11 @@
 // use soroban_sdk::deploy::DeployerWithAddress;
 // use soroban_sdk::xdr::Value;
 
+use access_control::transfer::TransferOwnershipTrait;
 use cvlr::clog;
 use soroban_sdk::{Address, Env};
 use access_control::interface::TransferableContract;
-use access_control::storage::{StorageTrait};
+use access_control::storage::{ StorageTrait};
 use access_control::role::{Role, SymbolRepresentation};
 use access_control::access::AccessControl;
 
@@ -19,12 +20,13 @@ use cvlr_soroban::{is_auth, nondet_address};
 use cvlr_soroban_derive::rule;
 
 use crate::certora_specs::util::{get_role_address, is_role,get_role_safe_address};
+use crate::certora_specs::ACCESS_CONTROL;
 pub use crate::contract::FeesCollector;
 use crate::interface::AdminInterface;
 use upgrade::interface::UpgradeableContract;
-use access_control::transfer::TransferOwnershipTrait;
 use upgrade::storage::{get_future_wasm };
 use upgrade::storage::get_upgrade_deadline;
+use upgrade::storage::DataKey;
 
 use crate::certora_specs::asaf_utils::{nondet_role, nondet_wasm,get_transfer_deadline};
 use crate::certora_specs::asaf_utils::fees_collector_funcs::{nondet_func, Action};
@@ -87,7 +89,7 @@ pub fn emergency_mode_changed_emergency_admin_is_some(e: Env){
 
 /** State Transition -- !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
  *  RULE: 
- *      if future address changed => its because some called commit
+ *      if future address changed => someone called commit
  *  Tested: Yes
  *  Bugs: Yes. get_emergency() again????
  *  Note:   When accessed get future role for feescollector and then through access control, it fails
@@ -151,7 +153,7 @@ pub fn user_changed_from_role_can_become_role_again(e: Env){
 
 /** --state transition
  *  RULE: 
- *      Role changed => apply transfer was called (implment for upgrade as well)
+ *      Role changed => apply transfer was called or InitAdmin was called if role was none. (implment for upgrade as well)
  *  Tested: Yes
  *  Bugs: No
  *  Note: 
@@ -168,10 +170,7 @@ pub fn role_only_changes_if_apply_transfer(e: Env){
 
     cvlr_assume!(address_before != address_after);
 
-    match address_before{
-        Some(_add) => cvlr_assert!(action == Action::ApplyTransfer),
-        None => cvlr_assert!(action == Action::ApplyTransfer || action == Action::InitAdmin)
-    }
+    cvlr_assert!(action==Action::ApplyTransfer ||  (address_before.is_none() && action == Action::InitAdmin));
 }
 
 /** 
@@ -266,8 +265,32 @@ pub fn deadline_changed_due_to_revert_or_apply(e: Env){
 }
 
 /** 
+ *  RULE: -- 
+ *      deadline can only change to > now() or zero
+ *  Tested: No
+ *  Bugs: No
+ *  Note: 
+ *       
+*/
+#[rule]
+pub fn deadline_valid_states_fees_collector(e: Env){
+    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL }.as_ref().unwrap();
+    let role =  nondet_role();
+    let deadline_before = acc_ctrl.get_transfer_ownership_deadline(&role);
+
+    nondet_func(e.clone());
+
+    let deadline_after = acc_ctrl.get_transfer_ownership_deadline(&role);
+
+    cvlr_assume!(deadline_before != deadline_after && deadline_after==0);
+
+    cvlr_assert!( deadline_after == 0 || deadline_after > e.ledger().timestamp());
+
+}
+
+/** 
  *  RULE: 
- *      role transfered after op =>  delay < blocktimestamp 
+ *      role transfered after apply =>  delay < blocktimestamp 
  *  Passed Test: https://prover.certora.com/output/7145022/f9ec987ad45a45cdaf4d31fcec6ac06d/?anonymousKey=92280f4d57bf53a92c55bc7b84f8ead3f430e5df&params=%7B%221%22%3A%7B%22index%22%3A0%2C%22ruleCounterExamples%22%3A%5B%7B%22name%22%3A%22rule_output_1.json%22%2C%22selectedRepresentation%22%3A%7B%22label%22%3A%22PRETTY%22%2C%22value%22%3A0%7D%2C%22callResolutionSingleFilter%22%3A%22%22%2C%22variablesFilter%22%3A%22%22%2C%22callTraceFilter%22%3A%22%22%2C%22variablesOpenItems%22%3A%5Btrue%2Ctrue%5D%2C%22callTraceCollapsed%22%3Atrue%2C%22rightSidePanelCollapsed%22%3Afalse%2C%22rightSideTab%22%3A%22%22%2C%22callResolutionSingleCollapsed%22%3Atrue%2C%22viewStorage%22%3Atrue%2C%22variablesExpandedArray%22%3A%22%22%2C%22expandedArray%22%3A%22%22%2C%22orderVars%22%3A%5B%22%22%2C%22%22%2C0%5D%2C%22orderParams%22%3A%5B%22%22%2C%22%22%2C0%5D%2C%22scrollNode%22%3A0%2C%22currentPoint%22%3A0%2C%22trackingChildren%22%3A%5B%5D%2C%22trackingParents%22%3A%5B%5D%2C%22trackingOnly%22%3Afalse%2C%22highlightOnly%22%3Afalse%2C%22filterPosition%22%3A0%2C%22singleCallResolutionOpen%22%3A%5B%5D%2C%22snap_drop_1%22%3Anull%2C%22snap_drop_2%22%3Anull%2C%22snap_filter%22%3A%22%22%7D%5D%7D%7D&generalState=%7B%22fileViewOpen%22%3Afalse%2C%22fileViewCollapsed%22%3Atrue%2C%22mainTreeViewCollapsed%22%3Atrue%2C%22callTraceClosed%22%3Afalse%2C%22mainSideNavItem%22%3A%22rules%22%2C%22globalResSelected%22%3Afalse%2C%22isSideBarCollapsed%22%3Atrue%2C%22isRightSideBarCollapsed%22%3Atrue%2C%22selectedFile%22%3A%7B%7D%2C%22fileViewFilter%22%3A%22%22%2C%22mainTreeViewFilter%22%3A%22%22%2C%22contractsFilter%22%3A%22%22%2C%22globalCallResolutionFilter%22%3A%22%22%2C%22currentRuleUiId%22%3A1%2C%22counterExamplePos%22%3A1%2C%22expandedKeysState%22%3A%22%22%2C%22expandedFilesState%22%3A%5B%5D%2C%22outlinedfilterShared%22%3A%22000000000%22%7D
  *  Validation Test: https://prover.certora.com/output/7145022/401e5593773f49569b6307fdd423701f/?anonymousKey=142058a38145e13da5254ae94d99a6a2a2efa3e8&params=%7B%222%22%3A%7B%22index%22%3A0%2C%22ruleCounterExamples%22%3A%5B%7B%22name%22%3A%22rule_output_1.json%22%2C%22selectedRepresentation%22%3A%7B%22label%22%3A%22PRETTY%22%2C%22value%22%3A0%7D%2C%22callResolutionSingleFilter%22%3A%22%22%2C%22variablesFilter%22%3A%22%22%2C%22callTraceFilter%22%3A%22%22%2C%22variablesOpenItems%22%3A%5Btrue%2Ctrue%5D%2C%22callTraceCollapsed%22%3Atrue%2C%22rightSidePanelCollapsed%22%3Afalse%2C%22rightSideTab%22%3A%22%22%2C%22callResolutionSingleCollapsed%22%3Atrue%2C%22viewStorage%22%3Atrue%2C%22variablesExpandedArray%22%3A%22%22%2C%22expandedArray%22%3A%22%22%2C%22orderVars%22%3A%5B%22%22%2C%22%22%2C0%5D%2C%22orderParams%22%3A%5B%22%22%2C%22%22%2C0%5D%2C%22scrollNode%22%3A0%2C%22currentPoint%22%3A0%2C%22trackingChildren%22%3A%5B%5D%2C%22trackingParents%22%3A%5B%5D%2C%22trackingOnly%22%3Afalse%2C%22highlightOnly%22%3Afalse%2C%22filterPosition%22%3A0%2C%22singleCallResolutionOpen%22%3A%5B%5D%2C%22snap_drop_1%22%3Anull%2C%22snap_drop_2%22%3Anull%2C%22snap_filter%22%3A%22%22%7D%5D%7D%7D&generalState=%7B%22fileViewOpen%22%3Afalse%2C%22fileViewCollapsed%22%3Atrue%2C%22mainTreeViewCollapsed%22%3Atrue%2C%22callTraceClosed%22%3Afalse%2C%22mainSideNavItem%22%3A%22rules%22%2C%22globalResSelected%22%3Afalse%2C%22isSideBarCollapsed%22%3Atrue%2C%22isRightSideBarCollapsed%22%3Atrue%2C%22selectedFile%22%3A%7B%7D%2C%22fileViewFilter%22%3A%22%22%2C%22mainTreeViewFilter%22%3A%22%22%2C%22contractsFilter%22%3A%22%22%2C%22globalCallResolutionFilter%22%3A%22%22%2C%22currentRuleUiId%22%3A2%2C%22counterExamplePos%22%3A1%2C%22expandedKeysState%22%3A%222-10-1-02-1-1-1-1-1-1-1-1%22%2C%22expandedFilesState%22%3A%5B%5D%2C%22outlinedfilterShared%22%3A%22000000000%22%7D
  *  Bugs: No
@@ -373,41 +396,41 @@ pub fn cant_transfer_role_to_none(e: Env){
 
 /** 
  *  RULE: 
- *      if role.has_transfer_delayed => role has deadline
+ *      if role has deadline => role.is_transfer_delayed
  *  Tested: Yes
  *  Bugs: No
  *  Note:   
 */
 #[rule]
-pub fn role_is_transfer_delayed_has_deadline(e: Env){
+pub fn role_has_deadline_is_transfer_delayed(){
 
-    //let role = nondet_role();
-    let role = Role::Admin;
-    cvlr_assume!(role.is_transfer_delayed());
-    let deadline = get_transfer_deadline(&role);
+    let role = nondet_role();
+    //let role = Role::Admin;
+    get_transfer_deadline(&role);
 
-    // cvlr_assert!(deadline >= 0); 
-    cvlr_satisfy!(true);
+    cvlr_assert!(role.is_transfer_delayed()); 
 }
 
 /** 
  *  RULE: 
- *      if role has no deadline => not role.is_transfer_delayed
- *      The other direction of the rule above
+ *      if role.is_transfer_delayed => role has deadline
+ *          The other direction of the rule above
  *  Tested: Yes
  *  Bugs: No
  *  Note:   
 */
 #[rule]
-pub fn role_has_deadline_is_transfer_delayed(e: Env){
+pub fn role_is_transfer_delayed_has_deadline(){
 
     let role = nondet_role();
-    let deadline = get_transfer_deadline(&role);
+    cvlr_assume!(!role.is_transfer_delayed());
+    //let role = Role::Admin;
+    get_transfer_deadline(&role);
 
-    cvlr_assume!(deadline >= 0);
+    cvlr_assert!(false); // shoudlnt reach.
 
-    cvlr_assert!(role.is_transfer_delayed()); 
 }
+
 
 /** 
  *  RULE:  
@@ -463,11 +486,7 @@ pub fn no_init_if_admin_exists(e: Env){
 /** HIGH LEVEL
  *  RULE:
  *          Every role has only 1 address, unless has_many_users
- *
  *  Note:   
- *          has_many_users is private, so I have to explicitly say what has many users (EmergencyPauseAdmin),
- *          insead of matching to role.has_many_users. its bad practice, due to its
- *          inflexibility in terms of future changes
  *    
  *  Tested: Yes. 
  *          Verified functionality by removing assumption 
@@ -476,20 +495,18 @@ pub fn no_init_if_admin_exists(e: Env){
  *  Bugs: No
 */
 #[rule]
-pub fn one_address_per_role(e: Env){
+pub fn one_address_per_role(){
     let role = nondet_role();
     let address = nondet_address();
     clog!(cvlr_soroban::Addr(&address));
     let other_address = nondet_address();
     clog!(cvlr_soroban::Addr(&other_address));
     
-    // TODO - add functionality for has many users
     cvlr_assume!(!role.has_many_users());
 
     // assume both addresses have the same role:
     cvlr_assume!(is_role(&address, &role) && is_role(&other_address, &role));
 
-    // Assert still holds
     cvlr_assert!(address==other_address);
 }
 
@@ -533,7 +550,7 @@ pub fn only_admin_transfers_roles_or_upgrades(e: Env){
  *  Reason: 
 */
 #[rule]
-pub fn only_admin_or_emergency_admin_address_can_changes(e: Env){
+pub fn only_admin_or_emergency_admin_be_transfered(e: Env){
     
     let role = nondet_role();
     let add_before = get_role_safe_address(role.clone());
@@ -579,31 +596,10 @@ pub fn contract_cant_have_role(e: Env){
 
 
 
-/** 
- *  RULE: 
- *      Deadline is a non-negetive value
- *  Tested: Yes
- *  Bugs: No
- *  Note:   I get a warning that the comparison is useless due to type warnings, which already means the rule passes
- *          But we have to acount for a future changes in code which might introduce this bug.
-*/
-#[rule]
-pub fn deadline_is_not_negative_transfer(e: Env){
-    let role = nondet_role();
-    cvlr_assume!(get_transfer_deadline(&role) >= 0);
-
-    //Execute operation
-    nondet_func(e.clone());
-
-    cvlr_assert!(get_transfer_deadline(&role) >= 0);
-}
-
-
-
 
 /** 
  *  RULE: 
- *      Cannot commit if deadline > 0 or currenttime < deadline
+ *      Cannot commit if deadline > 0 
  *  Tested: Yes. Verified by assuming deadline >= 0 
  *  Bugs: No
  *  Note: 
@@ -613,7 +609,7 @@ pub fn cant_commit_before_deadline_transfer(e: Env){
     let role = nondet_role();
     let deadline:u64 = get_transfer_deadline(&role);
 
-    cvlr_assume!(deadline > 0 || e.ledger().timestamp() < deadline);
+    cvlr_assume!(deadline > 0);
 
     FeesCollector::commit_transfer_ownership(e.clone(), nondet_address(), role.as_symbol(&e), nondet_address());
 
@@ -650,42 +646,10 @@ pub fn no_deadline_for_unauth_roles(e: Env){
 
 /** 
  *  RULE: 
- *      role.transfer delay => !role.has_many_users
- *  Tested: Yes.  
- *  Bugs: No
- *  Note: validated by changing admin has many users
-*/
-#[rule]
-pub fn role_has_transfer_delay_has_one_user(){
-    let role = nondet_role();
-
-    cvlr_assume!(role.is_transfer_delayed());
-    cvlr_assert!(!role.has_many_users());
-}
-
-/** 
- *  RULE: 
- *      role.has_many_users => !role.transfer_delay
- *  Tested: Yes. 
- *  Bugs: No
- *  Note: validated by changing admin has many users 
-*/
-#[rule]
-pub fn role_has_many_users_has_no_transfer_delay(){
-    let role = nondet_role();
-
-    cvlr_assume!(role.has_many_users());
-    cvlr_assert!(!role.is_transfer_delayed());
-}
-
-/** 
- *  RULE: 
  *      emergency mode changed => Emergency admin called set emergency mode
  *  Tested: Yes
  *  Bugs: No
- *  Note:   Note that it doesnt cover vacuity. Meaning that if set the emergency mode
- *          doesnt change, say, by removing the call to set emergency mode in the access control
- *          crate, than the rule passes. Unit tests should cover those paths. 
+ *  Note:   
 */
 #[rule]
 pub fn emergency_mode_state_transition(e: Env){ 
@@ -708,58 +672,6 @@ pub fn emergency_mode_state_transition(e: Env){
     // cvlr_satisfy!(true); // check reachability
 }
 
-/**
- * SANITY CHECKS
- */
-
-// check commit upgrade:
-#[rule]
-pub fn nondet_wasm_test(e: Env){
-    FeesCollector::commit_upgrade(e.clone(), nondet_address(), nondet_wasm());
-    cvlr_satisfy!(true);
-}
-// is_auth check - PASSED
-// - DELETE
-#[rule]
-pub fn is_auth_sanity(e: Env){
-    cvlr_assume!(is_auth(nondet_address()));
-    cvlr_assert!(true);
-}
-// comit sanity check from Fees collector
-#[rule]
-pub fn commit_transfer_sanity_from_fees_collector(e:Env){
-    let role_sym = nondet_role().as_symbol(&e);
-    FeesCollector::commit_transfer_ownership(e, nondet_address(), role_sym, nondet_address());
-    cvlr_satisfy!(true);
-}
-
-// comit sanity check from access control
-#[rule]
-pub fn commit_transfer_sanity_from_access_control(e:Env){
-    let access_control = AccessControl::new(&e);
-    access_control.commit_transfer_ownership(&nondet_role(), &nondet_address());
-    cvlr_satisfy!(true);
-}
-
-
-#[rule]
-pub fn apply_transfer_sanity_from_access_control(e: Env){
-    let access_control = AccessControl::new(&e);
-    access_control.apply_transfer_ownership(&nondet_role());
-    cvlr_satisfy!(true);
-}
-
-#[rule]
-pub fn get_future_address_sanity(e: Env){
-    let role_sym = nondet_role().as_symbol(&e);
-    let future = FeesCollector::get_future_address(e.clone(), role_sym);
-    clog!(cvlr_soroban::Addr(&future));
-    cvlr_satisfy!(true);
-}
-
-
-
-
 /*---------------------------------------------------------------------------------------------- */
 
 /**
@@ -768,7 +680,7 @@ pub fn get_future_address_sanity(e: Env){
 
 
 /** 
- *  RULE: --- kind of apply upgrade integrity unit test?
+ *  RULE: 
  * 
  *      if emergency mode => Admin apply upgrade without waiting on deadline
  *  Tested: Yes - verifyied by setting emergency mode false.
@@ -905,36 +817,37 @@ pub fn deadline_state_transition_upgrade(e: Env){
         cvlr_assert!(deadline_after == 0);
     }
 }
-
 /** 
  *  RULE: 
- *      Deadline is a non-negetive value
- *  Tested: Yes
- *  Bugs: No
- *  Note:   I get a warning that the comparison is useless due to type warnings, which already means the rule passes
- *          But we have to acount for a future changes in code which might introduce this bug.
-*/
-#[rule]
-pub fn deadline_is_not_negative_upgrade(e: Env){
-    let role = nondet_role();
-    cvlr_assume!(get_upgrade_deadline(&e) >= 0);
-
-    //Execute operation
-    nondet_func(e.clone());
-
-    cvlr_assert!(get_upgrade_deadline(&e) >= 0);
-}
-
-/** 
- *  RULE: 
- *      Cannot commit if deadline > 0 or currenttime < deadline
+ *      Cannot commit if deadline > 0 
  *  Passed: https://prover.certora.com/output/7145022/2eb21896630b4aaba2ebab6938b5d984/?anonymousKey=2bc94456fd21b606f7aa7e0892810c1fd5243016&params=%7B%221%22%3A%7B%22index%22%3A0%2C%22ruleCounterExamples%22%3A%5B%7B%22name%22%3A%22rule_output_1.json%22%2C%22selectedRepresentation%22%3A%7B%22label%22%3A%22PRETTY%22%2C%22value%22%3A0%7D%2C%22callResolutionSingleFilter%22%3A%22%22%2C%22variablesFilter%22%3A%22%22%2C%22callTraceFilter%22%3A%22%22%2C%22variablesOpenItems%22%3A%5Btrue%2Ctrue%5D%2C%22callTraceCollapsed%22%3Atrue%2C%22rightSidePanelCollapsed%22%3Afalse%2C%22rightSideTab%22%3A%22%22%2C%22callResolutionSingleCollapsed%22%3Atrue%2C%22viewStorage%22%3Atrue%2C%22variablesExpandedArray%22%3A%22%22%2C%22expandedArray%22%3A%22%22%2C%22orderVars%22%3A%5B%22%22%2C%22%22%2C0%5D%2C%22orderParams%22%3A%5B%22%22%2C%22%22%2C0%5D%2C%22scrollNode%22%3A0%2C%22currentPoint%22%3A0%2C%22trackingChildren%22%3A%5B%5D%2C%22trackingParents%22%3A%5B%5D%2C%22trackingOnly%22%3Afalse%2C%22highlightOnly%22%3Afalse%2C%22filterPosition%22%3A0%2C%22singleCallResolutionOpen%22%3A%5B%5D%2C%22snap_drop_1%22%3Anull%2C%22snap_drop_2%22%3Anull%2C%22snap_filter%22%3A%22%22%7D%5D%7D%7D&generalState=%7B%22fileViewOpen%22%3Afalse%2C%22fileViewCollapsed%22%3Atrue%2C%22mainTreeViewCollapsed%22%3Atrue%2C%22callTraceClosed%22%3Afalse%2C%22mainSideNavItem%22%3A%22rules%22%2C%22globalResSelected%22%3Afalse%2C%22isSideBarCollapsed%22%3Atrue%2C%22isRightSideBarCollapsed%22%3Atrue%2C%22selectedFile%22%3A%7B%7D%2C%22fileViewFilter%22%3A%22%22%2C%22mainTreeViewFilter%22%3A%22%22%2C%22contractsFilter%22%3A%22%22%2C%22globalCallResolutionFilter%22%3A%22%22%2C%22currentRuleUiId%22%3A1%2C%22counterExamplePos%22%3A1%2C%22expandedKeysState%22%3A%22%22%2C%22expandedFilesState%22%3A%5B%5D%2C%22outlinedfilterShared%22%3A%22000000000%22%7D
  *  Verified: https://prover.certora.com/output/7145022/7838738ab1cb45458b67b9116c8b6196/?anonymousKey=c6b4c0373d8e176ea868882a00496be4aa9cc746
  *  Bugs: No
  *  Note: Verified by assuming deadline >= 0 
 */
 #[rule]
-pub fn cant_commit_before_deadline_upgrade(e: Env){
+pub fn cant_commit_if_deadline_nonzero_upgrade(e: Env){
+    
+    let deadline:u64 = get_upgrade_deadline(&e);
+
+    cvlr_assume!(deadline != 0);
+
+    FeesCollector::commit_upgrade(e.clone(), nondet_address(), nondet_wasm());
+
+    //cvlr_satisfy!(true);
+    cvlr_assert!(false); // Should not reach -> should pass
+}
+
+/** 
+ *  RULE: 
+ *      Cannot apply if currenttime < deadline
+ *  Passed: https://prover.certora.com/output/7145022/2eb21896630b4aaba2ebab6938b5d984/?anonymousKey=2bc94456fd21b606f7aa7e0892810c1fd5243016&params=%7B%221%22%3A%7B%22index%22%3A0%2C%22ruleCounterExamples%22%3A%5B%7B%22name%22%3A%22rule_output_1.json%22%2C%22selectedRepresentation%22%3A%7B%22label%22%3A%22PRETTY%22%2C%22value%22%3A0%7D%2C%22callResolutionSingleFilter%22%3A%22%22%2C%22variablesFilter%22%3A%22%22%2C%22callTraceFilter%22%3A%22%22%2C%22variablesOpenItems%22%3A%5Btrue%2Ctrue%5D%2C%22callTraceCollapsed%22%3Atrue%2C%22rightSidePanelCollapsed%22%3Afalse%2C%22rightSideTab%22%3A%22%22%2C%22callResolutionSingleCollapsed%22%3Atrue%2C%22viewStorage%22%3Atrue%2C%22variablesExpandedArray%22%3A%22%22%2C%22expandedArray%22%3A%22%22%2C%22orderVars%22%3A%5B%22%22%2C%22%22%2C0%5D%2C%22orderParams%22%3A%5B%22%22%2C%22%22%2C0%5D%2C%22scrollNode%22%3A0%2C%22currentPoint%22%3A0%2C%22trackingChildren%22%3A%5B%5D%2C%22trackingParents%22%3A%5B%5D%2C%22trackingOnly%22%3Afalse%2C%22highlightOnly%22%3Afalse%2C%22filterPosition%22%3A0%2C%22singleCallResolutionOpen%22%3A%5B%5D%2C%22snap_drop_1%22%3Anull%2C%22snap_drop_2%22%3Anull%2C%22snap_filter%22%3A%22%22%7D%5D%7D%7D&generalState=%7B%22fileViewOpen%22%3Afalse%2C%22fileViewCollapsed%22%3Atrue%2C%22mainTreeViewCollapsed%22%3Atrue%2C%22callTraceClosed%22%3Afalse%2C%22mainSideNavItem%22%3A%22rules%22%2C%22globalResSelected%22%3Afalse%2C%22isSideBarCollapsed%22%3Atrue%2C%22isRightSideBarCollapsed%22%3Atrue%2C%22selectedFile%22%3A%7B%7D%2C%22fileViewFilter%22%3A%22%22%2C%22mainTreeViewFilter%22%3A%22%22%2C%22contractsFilter%22%3A%22%22%2C%22globalCallResolutionFilter%22%3A%22%22%2C%22currentRuleUiId%22%3A1%2C%22counterExamplePos%22%3A1%2C%22expandedKeysState%22%3A%22%22%2C%22expandedFilesState%22%3A%5B%5D%2C%22outlinedfilterShared%22%3A%22000000000%22%7D
+ *  Verified: https://prover.certora.com/output/7145022/7838738ab1cb45458b67b9116c8b6196/?anonymousKey=c6b4c0373d8e176ea868882a00496be4aa9cc746
+ *  Bugs: No
+ *  Note: Verified by assuming deadline >= 0 
+*/
+#[rule]
+pub fn cant_apply_before_deadline_upgrade(e: Env){
     
     let deadline:u64 = get_upgrade_deadline(&e);
 
@@ -946,6 +859,53 @@ pub fn cant_commit_before_deadline_upgrade(e: Env){
     cvlr_assert!(false); // Should not reach -> should pass
 }
 
+/** 
+ *  RULE: -- 
+ *      future wasm changed => deadline changed
+ *  Tested: No
+ *  Bugs: No
+ *  Note: 
+ *       
+*/
+#[rule]
+pub fn future_wasm_changed_deadline_changed(e: Env){
+
+    let future_wasm_before = upgrade::storage::get_future_wasm(&e);
+    let deadline_before = upgrade::storage::get_upgrade_deadline(&e);
+
+    nondet_func(e.clone());
+
+    let future_wasm_after = upgrade::storage::get_future_wasm(&e);
+    let deadline_after = upgrade::storage::get_upgrade_deadline(&e);
+
+    cvlr_assume!(future_wasm_before != future_wasm_after);
+
+    cvlr_assert!(deadline_before != deadline_after);
+}
+
+/** 
+ *  RULE: -- 
+ *      future wasm cant become None
+ *  Tested: No
+ *  Bugs: No
+ *  Note: 
+ *       
+*/
+#[rule]
+pub fn future_cant_be_none(e: Env){
+
+    let future_wasm_before = upgrade::storage::get_future_wasm(&e);
+
+    nondet_func(e.clone());
+
+    let future_wasm_after = upgrade::storage::get_future_wasm(&e);
+
+    cvlr_assume!(future_wasm_before != future_wasm_after);
+
+    cvlr_assert!(future_wasm_after.is_some());
+}
+
+
 
 /*------------------------------------------------------------------------------------------ */
 /**
@@ -953,7 +913,7 @@ pub fn cant_commit_before_deadline_upgrade(e: Env){
  */
 
 /** 
- * Functin: commit_transfer_ownership
+ * Function: commit_transfer_ownership
  * 
  * Functinality
  *  - Only admin
@@ -1131,6 +1091,7 @@ pub fn revert_transfer_ownership_integrity(e: Env){
 
 /** 
  * Function: get_future_address for Admin role
+ *              wrote the rule only for admin as proof of bug
  * 
  * Functinality
  *  - gets the future address
@@ -1166,7 +1127,7 @@ pub fn get_future_address_integrity_admin(e: Env){
  * https://prover.certora.com/output/7145022/db145f6e5ce54f89bedf76e84ae36080/?anonymousKey=fb450ad9ed27ad7498b5723591319a5fc0ae73ab&params=%7B%7D&generalState=%7B%22fileViewOpen%22%3Afalse%2C%22fileViewCollapsed%22%3Atrue%2C%22mainTreeViewCollapsed%22%3Atrue%2C%22callTraceClosed%22%3Afalse%2C%22mainSideNavItem%22%3A%22rules%22%2C%22globalResSelected%22%3Afalse%2C%22isSideBarCollapsed%22%3Afalse%2C%22isRightSideBarCollapsed%22%3Atrue%2C%22selectedFile%22%3A%7B%7D%2C%22fileViewFilter%22%3A%22%22%2C%22mainTreeViewFilter%22%3A%22%22%2C%22contractsFilter%22%3A%22%22%2C%22globalCallResolutionFilter%22%3A%22%22%2C%22currentRuleUiId%22%3Anull%2C%22counterExamplePos%22%3A1%2C%22expandedKeysState%22%3A%22%22%2C%22expandedFilesState%22%3A%5B%5D%2C%22outlinedfilterShared%22%3A%22000000000%22%7D
  */
 #[rule]
-pub fn get_future_address_integrity_nondet_role(e: Env){
+pub fn get_future_address_integrity_fees_collector(e: Env){
     let role = nondet_role();
     clog!(role.to_string());
 

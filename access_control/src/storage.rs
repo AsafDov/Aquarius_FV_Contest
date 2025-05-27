@@ -3,9 +3,14 @@ use crate::errors::AccessControlError;
 use crate::role::Role;
 use soroban_sdk::{contracttype, panic_with_error};
 
+/**
+ * Asaf:
+ * Changing visibility for spec access
+ */
+//pub(crate) enum DataKey {
 #[derive(Clone)]
 #[contracttype]
-pub(crate) enum DataKey {
+pub enum DataKey {
     Admin,           // owner - upgrade, set privileged roles
     EmergencyAdmin,  // emergency admin - put system into emergency mode, allowing instant upgrade
     Operator,        // rewards admin - configure rewards. legacy name cannot be changed
@@ -24,8 +29,12 @@ pub(crate) enum DataKey {
     // emergency mode
     EmergencyMode,
 }
-
-pub(crate) trait StorageTrait {
+/**
+ * Asaf:
+ * Changing visibility for spec access
+ */
+//pub(crate) trait StorageTrait {
+pub trait StorageTrait {
     fn get_key(&self, role: &Role) -> DataKey;
     fn get_future_key(&self, role: &Role) -> DataKey;
     fn get_future_deadline_key(&self, role: &Role) -> DataKey;

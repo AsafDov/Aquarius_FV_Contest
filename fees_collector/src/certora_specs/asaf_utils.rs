@@ -1,5 +1,6 @@
 
 use access_control::transfer::TransferOwnershipTrait;
+use cvlr::clog;
 // use cvlr::cvlr_assert;
 use cvlr::nondet;
 // use cvlr_soroban::is_auth;
@@ -79,20 +80,6 @@ pub mod fees_collector_funcs{
             return action;
         }
 }
-        
-        
-// pub fn invariant_only_admin<F>(f: F) where F: FnOnce(){
-//     f();
-
-//     let admin = get_role_safe_address(Role::Admin);
-//     //If there is an Admin => he should be signer;
-//     //If there is no admin => commit could not have been done by the admin. 
-//     match admin{
-//         Some(admin) => {let is_auth = is_auth(admin);
-//                                  cvlr_assert!(is_auth); },
-//         None => cvlr_assert!(false)
-//     }
-// }
 
 /**
  * Asaf
@@ -242,4 +229,18 @@ pub mod access_control_funcs{
     }
     
 }
-
+/**
+ * Asaf:
+ * added to_string method for clog!
+ */
+pub fn role_to_string(role : &Role){
+    match role {
+        Role::Admin => clog!("Admin"),
+        Role::EmergencyAdmin => clog!("EmergencyAdmin"),
+        Role::RewardsAdmin => clog!("RewardsAdmin"),
+        Role::OperationsAdmin => clog!("OperationsAdmin"),
+        Role::PauseAdmin => clog!("PauseAdmin"),
+        Role::EmergencyPauseAdmin => clog!("EmergencyPauseAdmin"),
+        _ => clog!("None"),
+    }
+}

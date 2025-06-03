@@ -1,8 +1,7 @@
 use soroban_sdk::Address;
 
 use access_control::management::SingleAddressManagementTrait;
-use access_control::transfer::TransferOwnershipTrait;
-use access_control::access::{AccessControl, AccessControlTrait};
+use access_control::access::{AccessControlTrait};
 use access_control::role::Role;
 
 use crate::certora_specs::ACCESS_CONTROL;

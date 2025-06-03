@@ -1,5 +1,5 @@
 use crate::errors::AccessControlError;
-use soroban_sdk::{panic_with_error, Env, String, Symbol};
+use soroban_sdk::{panic_with_error, Env, Symbol};
 
 #[derive(Clone)]
 pub enum Role {
@@ -41,22 +41,6 @@ impl Role {
             Role::OperationsAdmin => false,
             Role::PauseAdmin => false,
             Role::EmergencyPauseAdmin => false,
-        }
-    }
-
-    /**
-     * Asaf:
-     * added to_string method for clog!
-     */
-    pub fn to_string(&self) -> &'static str {
-        match self {
-            Role::Admin => "Admin",
-            Role::EmergencyAdmin => "EmergencyAdmin",
-            Role::RewardsAdmin => "RewardsAdmin",
-            Role::OperationsAdmin => "OperationsAdmin",
-            Role::PauseAdmin => "PauseAdmin",
-            Role::EmergencyPauseAdmin => "EmergencyPauseAdmin",
-            _ => "None"
         }
     }
 }

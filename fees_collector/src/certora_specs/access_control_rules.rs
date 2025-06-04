@@ -1,6 +1,6 @@
 use crate::certora_specs::asaf_utils::access_control_funcs::{nondet_func, Action};
 use crate::certora_specs::asaf_utils::{get_transfer_deadline, role_to_string};
-use crate::certora_specs::util::{get_role_safe_address, is_role};
+use crate::certora_specs::util::{is_role};
 use access_control::access::AccessControlTrait;
 use access_control::management::{MultipleAddressesManagementTrait, SingleAddressManagementTrait};
 use access_control::role::{Role, SymbolRepresentation};
@@ -1040,7 +1040,7 @@ pub fn get_transfer_ownership_deadline_integrity(e: Env) {
  * This rule is to prove the Vec comparison bug
  */
 #[rule]
-pub fn compare_two_poissibly_empty_vectors(e: Env) {
+pub fn compare_two_poissibly_empty_vectors() {
     let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL }.as_ref().unwrap();
 
     let role = Role::EmergencyPauseAdmin;

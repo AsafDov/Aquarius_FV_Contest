@@ -241,6 +241,5 @@ pub fn role_to_string(role : &Role){
         Role::OperationsAdmin => clog!("OperationsAdmin"),
         Role::PauseAdmin => clog!("PauseAdmin"),
         Role::EmergencyPauseAdmin => clog!("EmergencyPauseAdmin"),
-        _ => clog!("None"),
     }
 }

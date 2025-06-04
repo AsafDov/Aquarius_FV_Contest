@@ -1,7 +1,7 @@
 pub mod fee_collector_rules;
 pub mod util;
 pub mod asaf_utils;
-pub mod access_conrol_rules;
+pub mod access_control_rules;
 
 use access_control::access::AccessControl;
 

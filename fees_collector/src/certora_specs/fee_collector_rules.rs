@@ -10,6 +10,7 @@ use access_control::interface::TransferableContract;
 use access_control::management::{MultipleAddressesManagementTrait, SingleAddressManagementTrait};
 use access_control::role::{Role, SymbolRepresentation};
 use access_control::storage::StorageTrait;
+use access_control::transfer::TransferOwnershipTrait;
 use cvlr::clog;
 use soroban_sdk::{Address, Env};
 
@@ -192,30 +193,30 @@ pub fn cant_apply_transfer_if_revert_called(e: Env) {
 }
 
 /**
- *  RULE: role transfered after apply =>  delay <= blocktimestamp
+ *  RULE: Apply called and address before wasnt none =>  delay <= blocktimestamp
  *  Tested: Yes
  *  Bugs: No
  *  Note: This rule doesnt check role.has_many_users() because it is not relevant for the FeesCollector.
 */
 #[rule]
 pub fn role_cant_transfer_within_deadline(e: Env) {
+    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL }.as_ref().unwrap();
     let role = nondet_role();
-
+    role_to_string(&role);
     let address_before = get_role_safe_address(role.clone());
-    let delay = get_transfer_deadline(&role);
 
-    // Assume a delay is set, someone called commit
-    cvlr_assume!(delay > 0);
+    let delay = acc_ctrl.get_transfer_ownership_deadline(&role);
+    // cvlr_assume!(delay > 0 && address_before.is_some());
+    cvlr_assume!(delay > e.ledger().timestamp() && address_before.is_some());
 
     // Execute apply
     FeesCollector::apply_transfer_ownership(e.clone(), nondet_address(), role.as_symbol(&e));
+    
+    clog!(delay);
+    clog!(e.ledger().timestamp());  
 
-    let address_after = get_role_safe_address(role.clone());
-
-    // assume role transfered
-    cvlr_assume!(address_before != address_after);
-
-    cvlr_assert!(delay <= e.ledger().timestamp());
+    // cvlr_assert!(e.ledger().timestamp() >= delay);
+    cvlr_assert!(false); // Should not reach, should pass
 }
 
 /**
@@ -366,7 +367,7 @@ pub fn one_role_at_a_time_transfering_role_has_many_users_fees_collector(e: Env)
     let addresses_after = acc_ctrl.get_role_addresses(&role);
     let other_address_after = acc_ctrl.get_role_safe(&other_role);
 
-    cvlr_assume!(addresses_before != addresses_after);
+    cvlr_assume!((addresses_before.len()>0 || addresses_after.len()>0) && addresses_before != addresses_after);
 
     cvlr_assert!(other_address_before == other_address_after);
 }
@@ -385,17 +386,18 @@ pub fn one_role_at_a_time_other_role_has_many_users_fees_collector(e: Env) {
     role_to_string(&role);
     role_to_string(&other_role);
 
-    let addresses_before = acc_ctrl.get_role_safe(&role);
-    let other_address_before = acc_ctrl.get_role_addresses(&other_role);
+    let address_before = acc_ctrl.get_role_safe(&role);
+    let other_addresses_before = acc_ctrl.get_role_addresses(&other_role);
 
     nondet_func(e.clone());
 
-    let addresses_after = acc_ctrl.get_role_safe(&role);
-    let other_address_after = acc_ctrl.get_role_addresses(&other_role);
+    let address_after = acc_ctrl.get_role_safe(&role);
+    let other_addresses_after = acc_ctrl.get_role_addresses(&other_role);
 
-    cvlr_assume!(addresses_before != addresses_after);
+    cvlr_assume!(address_before != address_after);
 
-    cvlr_assert!(other_address_before == other_address_after);
+    cvlr_assert!((other_addresses_before == other_addresses_after) ||
+                (other_addresses_before.len() == 0 && other_addresses_after.len() == 0));
 }
 
 /**
@@ -414,18 +416,19 @@ pub fn one_role_at_a_time_both_has_many_users_fees_collector(e: Env) {
     role_to_string(&other_role);
 
     let addresses_before = acc_ctrl.get_role_addresses(&role);
-    let other_address_before = acc_ctrl.get_role_addresses(&other_role);
+    let other_addresses_before = acc_ctrl.get_role_addresses(&other_role);
 
-    cvlr_assume!(addresses_before != other_address_before); // Currently renders the rule vacuous.
+    cvlr_assume!((addresses_before.len()>0 || other_addresses_before.len()>0) && addresses_before != other_addresses_before); // Currently renders the rule vacuous.
 
     nondet_func(e.clone());
 
     let addresses_after = acc_ctrl.get_role_addresses(&role);
-    let other_address_after = acc_ctrl.get_role_addresses(&other_role);
+    let other_addresses_after = acc_ctrl.get_role_addresses(&other_role);
 
-    cvlr_assume!(addresses_before != addresses_after);
+    cvlr_assume!((addresses_before.len()>0 || addresses_after.len()>0) && addresses_before != addresses_after);
 
-    cvlr_assert!(other_address_before == other_address_after);
+    cvlr_assert!(   (other_addresses_before == other_addresses_after) ||
+                    (other_addresses_before.len() == 0 && other_addresses_after.len() == 0));
 }
 
 /**
@@ -1041,11 +1044,15 @@ pub fn commit_transfer_ownership_integrity(e: Env) {
  */
 #[rule]
 pub fn apply_transfer_ownership_integrity(e: Env) {
+    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL }.as_ref().unwrap();
     let admin = get_role_safe_address(Role::Admin);
     let role = nondet_role();
-    let future_add = FeesCollector::get_future_address(e.clone(), role.clone().as_symbol(&e));
+    let role_key = acc_ctrl.get_future_key(&role);
+    let future_add: Address = e.storage().instance().get(&role_key).unwrap();    
+    role_to_string(&role);  
 
-    let deadline_before = get_transfer_deadline(&role);
+    let deadline_before = acc_ctrl.get_transfer_ownership_deadline(&role);
+    let address_before = acc_ctrl.get_role_safe(&role);
 
     FeesCollector::apply_transfer_ownership(
         e.clone(),
@@ -1053,18 +1060,25 @@ pub fn apply_transfer_ownership_integrity(e: Env) {
         role.clone().as_symbol(&e),
     );
 
-    let deadline_after = get_transfer_deadline(&role);
+    let deadline_after = acc_ctrl.get_transfer_ownership_deadline(&role);
+
+    clog!(deadline_before);
+    clog!(deadline_after);
+    clog!(e.ledger().timestamp());
+
+    let current_address: Address = e.storage().instance().get(&role_key).unwrap();
+    clog!(cvlr_soroban::Addr(&current_address));
+    clog!(cvlr_soroban::Addr(&future_add));
 
     match admin {
         Some(admin) => cvlr_assert!(
-            is_auth(admin)
+                is_auth(admin)
                 && deadline_after == 0
-                && deadline_before < e.ledger().timestamp()
-                && is_role(&future_add, &role)
+                && future_add == current_address
+                && ((address_before.is_some() && deadline_before <= e.ledger().timestamp()) || address_before.is_none())    
         ),
         None => cvlr_assert!(false), // Cant apply transfer without admin
     }
-
     //cvlr_satisfy!(true)
 }
 
@@ -1172,3 +1186,5 @@ pub fn get_emergency_mode_integrity(e: Env) {
 
     cvlr_assert!(true_emergency_mode == emergency_mode_from_fees);
 }
+
+

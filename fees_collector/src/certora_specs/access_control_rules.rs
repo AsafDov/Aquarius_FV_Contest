@@ -379,6 +379,7 @@ pub fn role_cant_change_to_none(e: Env) {
  *  Bugs: No
  *  Note: Theres also an option to change all roles via the set_role_address/es function.
  *        No need to check for has_many_users() because the rule is not applicable for those.
+ *        
  */
 #[rule]
 pub fn role_changed_is_admin_or_emergency_admin(e: Env) {

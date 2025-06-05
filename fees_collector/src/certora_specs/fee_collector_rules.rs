@@ -606,7 +606,7 @@ pub fn only_admin_or_emergency_admin_be_transfered(e: Env) {
 }
 
 /**
- *  RULE: Contract address cant have role. Its more important for Admin and Emergency Admin.
+ *  RULE: Contract address cant have role. Its more important for Admin or Emergency Admin.
  *  Tested: Yes
  *  Bugs: Yes
  *  Note: Contract can be assigned a role. Its a bug. Contract could lose functionality if
@@ -614,17 +614,22 @@ pub fn only_admin_or_emergency_admin_be_transfered(e: Env) {
 */
 #[rule]
 pub fn contract_cant_have_role(e: Env) {
-    let role = &nondet_role();
+    let role = nondet_role();
     let contract = e.current_contract_address();
+    let current_address_before = get_role_safe_address(role.clone());
 
-    // Assume the contract has no role innitially
-    cvlr_assume!(!is_role(&contract, &role));
+    if current_address_before.is_some() {
+        cvlr_assume!(current_address_before.unwrap() != contract);
+    }
+    role_to_string(&role);
 
     // Execute Operation
     nondet_func(e.clone());
 
+    let current_address_after = get_role_safe_address(role.clone());
+
     // Assert contract still has no role assigned.
-    cvlr_assert!(!is_role(&contract, &role))
+    cvlr_assert!(current_address_after.unwrap() != contract)
     //cvlr_satisfy!(is_role(&contract, &role))
 }
 

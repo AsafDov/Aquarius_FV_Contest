@@ -9,10 +9,10 @@ use access_control::access::AccessControl;
 use access_control::interface::TransferableContract;
 use access_control::management::{MultipleAddressesManagementTrait, SingleAddressManagementTrait};
 use access_control::role::{Role, SymbolRepresentation};
-use access_control::storage::StorageTrait;
+use access_control::storage::{DataKey, StorageTrait};
 use access_control::transfer::TransferOwnershipTrait;
 use cvlr::clog;
-use soroban_sdk::{Address, Env};
+use soroban_sdk::{Address, Env, Vec};
 
 use cvlr::asserts::{cvlr_assert, cvlr_assume};
 use cvlr::{cvlr_satisfy, nondet};
@@ -161,6 +161,7 @@ pub fn one_address_per_role() {
 #[rule]
 pub fn role_only_changes_if_apply_transfer(e: Env) {
     let role = nondet_role();
+    role_to_string(&role);
     let address_before = get_role_safe_address(role.clone());
 
     // Execute operation
@@ -615,23 +616,23 @@ pub fn only_admin_or_emergency_admin_be_transfered(e: Env) {
 #[rule]
 pub fn contract_cant_have_role(e: Env) {
     let role = nondet_role();
-    let contract = e.current_contract_address();
-    let current_address_before = get_role_safe_address(role.clone());
-
-    if current_address_before.is_some() {
-        cvlr_assume!(current_address_before.unwrap() != contract);
-    }
     role_to_string(&role);
+    let contract_address = e.current_contract_address();  
+    clog!(cvlr_soroban::Addr(&contract_address));
 
-    // Execute Operation
+    let address_before = get_role_safe_address(role.clone());
+
+    // Execute operation
     nondet_func(e.clone());
+    
+    let address_after = get_role_safe_address(role.clone());
+    
+    // Assume the role changed addresses
+    cvlr_assume!(address_before != address_after);
 
-    let current_address_after = get_role_safe_address(role.clone());
-
-    // Assert contract still has no role assigned.
-    cvlr_assert!(current_address_after.unwrap() != contract)
-    //cvlr_satisfy!(is_role(&contract, &role))
+    cvlr_assert!(address_after.unwrap() != contract_address);
 }
+
 
 /**
  *  RULE: If future address changed => someone called commit
@@ -1158,19 +1159,19 @@ pub fn get_future_address_integrity_admin(e: Env) {
 pub fn get_future_address_integrity_fees_collector(e: Env) {
     let role = nondet_role();
     role_to_string(&role);
-
+    
     let acc_ctrl = AccessControl::new(&e);
     // Assume someone called commit
     cvlr_assume!(get_transfer_deadline(&role) > 0);
     //acc_ctrl.get_future_address(&role);
     let future_key = acc_ctrl.get_future_key(&role);
     let true_future_add: Address = e.storage().instance().get(&future_key).unwrap();
-
+    
     let future_from_fees = FeesCollector::get_future_address(e.clone(), role.clone().as_symbol(&e));
-
+    
     clog!(cvlr_soroban::Addr(&true_future_add));
     clog!(cvlr_soroban::Addr(&future_from_fees));
-
+    
     //clog!(&acc_ctrl.get_transfer_ownership_deadline(&role));
     cvlr_assert!(true_future_add == future_from_fees);
 }
@@ -1188,8 +1189,59 @@ pub fn get_emergency_mode_integrity(e: Env) {
     let emergency_mode_key = access_control::storage::DataKey::EmergencyMode;
     let emergency_mode_from_fees = FeesCollector::get_emergency_mode(e.clone());
     let true_emergency_mode: bool = e.storage().instance().get(&emergency_mode_key).unwrap();
-
+    
     cvlr_assert!(true_emergency_mode == emergency_mode_from_fees);
 }
 
+/** Rules proving the From_symbol and Vec comparison bugs*/
+
+/**
+ * RULE: Comparison between two vectors of addresses when possibly both are empty
+ *
+ * This rule is to prove the Vec comparison bug
+ */
+#[rule]
+pub fn compare_two_poissibly_empty_vectors() {
+    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL }.as_ref().unwrap();
+
+    let role = Role::EmergencyPauseAdmin;
+    let vec3 = acc_ctrl.get_role_addresses(&role);
+    let vec5 = acc_ctrl.get_role_addresses(&role);  
+
+    cvlr_assert!(vec3 == vec5);
+}
+
+/**
+ * RULE: Comparison between two vectors of addresses when at least one is not empty
+ * 
+ * This rule is to prove the Vec comparison bug
+ */
+#[rule]
+pub fn compare_two_vectors_at_least_one_isnt_empty(e: Env) {
+    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL }.as_ref().unwrap();
+
+    let role = Role::EmergencyPauseAdmin;
+    // let vec3 = acc_ctrl.get_role_addresses(&role);
+    // let vec5 = acc_ctrl.get_role_addresses(&role);  
+
+    let vec3 = e.storage().instance().get::<DataKey, Vec<Address>>(&acc_ctrl.get_key(&role)).unwrap_or(Vec::new(&e));
+    let vec5 = e.storage().instance().get::<DataKey, Vec<Address>>(&acc_ctrl.get_key(&role)).unwrap_or(Vec::new(&e));
+
+    cvlr_assume!(vec3.len() > 0 || vec5.len() > 0);
+
+    cvlr_assert!(vec3 == vec5);
+}
+
+/**
+ *  RULE: Role.as_symbol reverts for admin
+ * 
+ * This rule is to prove the from_symbol bug
+ *  Bugs: rule fails, therefore, from_symbol is unreachable for admin
+*/
+#[rule]
+pub fn role_from_symbol_reverts_for_admin(e: Env) {
+    Role::from_symbol(&e, Role::Admin.as_symbol(&e));
+
+    cvlr_satisfy!(true); 
+}
 

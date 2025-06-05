@@ -376,7 +376,7 @@ pub fn role_cant_change_to_none(e: Env) {
 /**
  *  RULE: Role changed => role is either Admin or EmergencyAdmin unless using set_role_address
  *  Tested: Yes
- *  Bugs: No
+ *  Bugs: No - but rule fails for Admin due to the from_symbol bug.
  *  Note: Theres also an option to change all roles via the set_role_address/es function.
  *        No need to check for has_many_users() because the rule is not applicable for those.
  *        
@@ -406,7 +406,7 @@ pub fn role_changed_is_admin_or_emergency_admin(e: Env) {
  *  RULE: Role changed and has many users => set_role_addresses called
  *  Tested: Yes
  *  Bugs: Yes
- *  Note: rule fails due to Vec.contain bug. Use the commented assumption to prove it works without the bug.
+ *  Note: (address_vec_before.len()>0 || address_vec_after.len()>0) added to the assumption due to the Vec comparison bug.
  */
 #[rule]
 pub fn role_has_many_users_changes_due_to_set_role_addresses(e: Env) {
@@ -418,11 +418,6 @@ pub fn role_has_many_users_changes_due_to_set_role_addresses(e: Env) {
     let address_vec_before = acc_ctrl.get_role_addresses(&role);
 
     let action = nondet_func(e.clone());
-
-    // to prove it works without the bugged functions
-    // cvlr_assume!(   action != Action::AddressHasRole && 
-    //                 action != Action::AssertAddressHasRole &&
-    //                 action != Action::RequirePauseOrEmergencyPauseAdminOrOwner); 
 
     let address_vec_after = acc_ctrl.get_role_addresses(&role);
 
@@ -1033,54 +1028,4 @@ pub fn get_transfer_ownership_deadline_integrity(e: Env) {
     cvlr_assert!(
         get_deadline == e.storage().instance().get::<DataKey, u64>(&deadline_key).unwrap()
     );
-}
-
-/**
- * RULE: Comparison between two vectors of addresses when possibly both are empty
- *
- * This rule is to prove the Vec comparison bug
- */
-#[rule]
-pub fn compare_two_poissibly_empty_vectors() {
-    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL }.as_ref().unwrap();
-
-    let role = Role::EmergencyPauseAdmin;
-    let vec3 = acc_ctrl.get_role_addresses(&role);
-    let vec5 = acc_ctrl.get_role_addresses(&role);  
-
-    cvlr_assert!(vec3 == vec5);
-}
-
-/**
- * RULE: Comparison between two vectors of addresses when at least one is not empty
- * 
- * This rule is to prove the Vec comparison bug
- */
-#[rule]
-pub fn compare_two_vectors_at_least_one_isnt_empty(e: Env) {
-    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL }.as_ref().unwrap();
-
-    let role = Role::EmergencyPauseAdmin;
-    // let vec3 = acc_ctrl.get_role_addresses(&role);
-    // let vec5 = acc_ctrl.get_role_addresses(&role);  
-
-    let vec3 = e.storage().instance().get::<DataKey, Vec<Address>>(&acc_ctrl.get_key(&role)).unwrap_or(Vec::new(&e));
-    let vec5 = e.storage().instance().get::<DataKey, Vec<Address>>(&acc_ctrl.get_key(&role)).unwrap_or(Vec::new(&e));
-
-    cvlr_assume!(vec3.len() > 0 || vec5.len() > 0);
-
-    cvlr_assert!(vec3 == vec5);
-}
-
-/**
- *  RULE: Role.as_symbol reverts for admin
- * 
- * This rule is to prove the from_symbol bug
- *  Bugs: rule fails, therefore, from_symbol is unreachable for admin
-*/
-#[rule]
-pub fn role_from_symbol_reverts_for_admin(e: Env) {
-    Role::from_symbol(&e, Role::Admin.as_symbol(&e));
-
-    cvlr_satisfy!(true); 
 }

@@ -6,3 +6,4 @@ target
 test_snapshots
 **/.certora_internal/*
 **/.cargo/
+fees_collector/confs/rule_test.conf

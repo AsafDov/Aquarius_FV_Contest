@@ -3,8 +3,9 @@ extern crate std;
 
 use crate::testutils::{create_contract, install_dummy_wasm, jump, Setup};
 use access_control::constants::ADMIN_ACTIONS_DELAY;
+use access_control::role::{Role, SymbolRepresentation};
 use soroban_sdk::testutils::{Address as _, Events};
-use soroban_sdk::{symbol_short, vec, Address, Env, IntoVal, Symbol};
+use soroban_sdk::{symbol_short, vec, Address, Env, IntoVal, Symbol, Vec};
 
 #[test]
 fn test() {
@@ -194,4 +195,65 @@ fn test_regular_upgrade() {
     contract.apply_upgrade(&setup.admin);
 
     assert_eq!(contract.version(), 130)
+}
+
+// Asaf: Proof that the for_symbol bug works correctly.
+#[test]
+fn test_from_symbol_admin() {
+    let setup = Setup::default();
+
+    Role::from_symbol(&setup.env, Role::Admin.as_symbol(&setup.env));
+
+    assert!(true);
+}
+
+// Asaf: Proof for contract cant have role with init_admin   
+#[should_panic]
+#[test]
+fn test_contract_cant_have_role_init_admin() {
+        let env = Env::default();
+        env.mock_all_auths();
+        env.cost_estimate().budget().reset_unlimited();
+        //let admin = Address::generate(&env);
+        let collector = create_contract(&env);
+        let contract_address = collector.address.clone();
+        collector.init_admin(&contract_address);
+
+        // Only admin allowed to commit transfer ownership
+        // This should panic because the contract itself cannot have a role
+        collector.commit_transfer_ownership(&contract_address, &Role::Admin.as_symbol(&env), &Address::generate(&env));
+    assert!(true);
+}
+
+// Asaf: Proof for contract cant have role with transfer ownership  
+#[should_panic]
+#[test]
+fn test_contract_cant_have_role_transfer_ownership() {
+    let setup = Setup::default();
+    let collector = setup.collector;
+    let admin_original = setup.admin;
+    let admin_new = collector.address.clone();
+
+    collector.commit_transfer_ownership(&admin_original, &symbol_short!("Admin"), &admin_new);
+    // check admin not changed yet by calling protected method
+    assert!(collector
+        .try_revert_transfer_ownership(&admin_new, &symbol_short!("Admin"))
+        .is_err());
+    jump(&setup.env, ADMIN_ACTIONS_DELAY + 1);
+    collector.apply_transfer_ownership(&admin_original, &symbol_short!("Admin"));
+
+    collector.commit_transfer_ownership(&admin_new, &symbol_short!("Admin"), &admin_new);
+    assert!(true);
+}
+
+
+
+// Asaf: Proof the Vec<Address> comparison works correctly
+#[test]
+fn test_vec_comparison() {
+    let env = Env::default();
+    let vec1: Vec<Address> = Vec::new(&env);
+    let vec2: Vec<Address> = Vec::new(&env);    
+
+    assert_eq!(vec1, vec2);
 }

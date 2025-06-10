@@ -1,3 +1,12 @@
+# Contest Submission
+Please refer to the Aqurious_FV_Report pdf for the detailed report on the properties and bugs found. \
+In accordance with the contest's requirements, the bugs have also been reported as issues. 
+
+
+
+***
+Below is the original README file
+__________________________________________________________
 # Aquarius Formal Verification Contest Details
 - Total Prize Pool: $20,000 in USDC 
   - Real Bug Rules: $4,000 in USDC

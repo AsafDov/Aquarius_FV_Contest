@@ -2,9 +2,9 @@
 extern crate std;
 
 use crate::testutils::{create_token_contract, get_token_admin_client, Setup};
-use soroban_sdk::testutils::Address as _;
+use soroban_sdk::testutils::{Address as _, Ledger, LedgerInfo};
 use soroban_sdk::token::TokenClient;
-use soroban_sdk::{vec, Address, Vec};
+use soroban_sdk::{symbol_short, vec, Address, Env, Vec};
 
 #[test]
 fn test_integration() {
@@ -101,4 +101,27 @@ fn test_integration() {
         ),
         2_8864196,
     );
+
+    setup.router.commit_transfer_ownership(&setup.admin, &symbol_short!("Admin"), &setup.router.address);
+    // setup.router.commit_transfer_ownership(&setup.admin, &symbol_short!("Admin"), &setup.router.address);
+    jump(&setup.env, 3 * 86400 + 1);
+    setup.router.apply_transfer_ownership(&setup.admin, &symbol_short!("Admin"));
+
+    let new_admin = Address::generate(&setup.env);
+    // Should panic because caller cannot be contract address
+    setup.router.commit_transfer_ownership(&setup.router.address, &symbol_short!("Admin"), &new_admin);
+
 }
+
+pub(crate) fn jump(e: &Env, time: u64) {
+    e.ledger().set(LedgerInfo {
+        timestamp: e.ledger().timestamp().saturating_add(time),
+        protocol_version: e.ledger().protocol_version(),
+        sequence_number: e.ledger().sequence(),
+        network_id: Default::default(),
+        base_reserve: 10,
+        min_temp_entry_ttl: 999999,
+        min_persistent_entry_ttl: 999999,
+        max_entry_ttl: u32::MAX,
+    });
+}      

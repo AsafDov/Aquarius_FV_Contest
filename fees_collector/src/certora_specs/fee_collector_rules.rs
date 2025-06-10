@@ -28,8 +28,8 @@ use upgrade::storage::get_future_wasm;
 use upgrade::storage::get_upgrade_deadline;
 //use upgrade::storage::DataKey;
 
-use crate::certora_specs::asaf_utils::fees_collector_funcs::{nondet_func, Action};
-use crate::certora_specs::asaf_utils::{
+use crate::certora_specs::utils_ext::fees_collector_funcs::{nondet_func, Action};
+use crate::certora_specs::utils_ext::{
     get_transfer_deadline, nondet_role, nondet_wasm, role_to_string,
 };
 

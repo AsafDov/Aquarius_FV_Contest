@@ -1,5 +1,5 @@
-use crate::certora_specs::asaf_utils::access_control_funcs::{nondet_func, Action};
-use crate::certora_specs::asaf_utils::{get_transfer_deadline, role_to_string};
+use crate::certora_specs::utils_ext::access_control_funcs::{nondet_func, Action};
+use crate::certora_specs::utils_ext::{get_transfer_deadline, role_to_string};
 use crate::certora_specs::util::{is_role};
 use access_control::access::AccessControlTrait;
 use access_control::management::{MultipleAddressesManagementTrait, SingleAddressManagementTrait};
@@ -12,7 +12,7 @@ use cvlr_soroban::{nondet_address, nondet_vec};
 use cvlr_soroban_derive::rule;
 use soroban_sdk::{ Address, Env, Vec};
 
-use super::asaf_utils::nondet_role;
+use super::utils_ext::nondet_role;
 use super::ACCESS_CONTROL;
 
 // example for unit test rule for access control

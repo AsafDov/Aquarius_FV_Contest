@@ -103,13 +103,16 @@ fn test_integration() {
         2_8864196,
     );
 
+    // Transferring the ownership of the router to the admin to the router address
     setup.router.commit_transfer_ownership(&setup.admin, &symbol_short!("Admin"), &setup.router.address);
     // setup.router.commit_transfer_ownership(&setup.admin, &symbol_short!("Admin"), &setup.router.address);
     jump(&setup.env, 3 * 86400 + 1);
     setup.router.apply_transfer_ownership(&setup.admin, &symbol_short!("Admin"));
 
     let new_admin = Address::generate(&setup.env);
-    // Should panic because caller cannot be contract address
+
+    // * This should panic because caller cannot be contract address. 
+    // ! It proves that the ownership is at the hands of the router.address which renders the contract useless.
     setup.router.commit_transfer_ownership(&setup.router.address, &symbol_short!("Admin"), &new_admin);
 
 }

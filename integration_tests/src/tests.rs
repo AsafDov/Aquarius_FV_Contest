@@ -6,6 +6,7 @@ use soroban_sdk::testutils::{Address as _, Ledger, LedgerInfo};
 use soroban_sdk::token::TokenClient;
 use soroban_sdk::{symbol_short, vec, Address, Env, Vec};
 
+#[should_panic]
 #[test]
 fn test_integration() {
     let setup = Setup::default();

@@ -1,0 +1,4 @@
+ruleName,original,transfer_4,transfer_0,transfer_3,transfer_1,transfer_5,transfer_2
+commit_transfer_ownership_integrity_access_control,UNCAUGHT,UNCAUGHT,UNCAUGHT,UNCAUGHT,CAUGHT,CAUGHT,UNCAUGHT
+future_address_changed_deadline_changed_access_control,UNCAUGHT,UNCAUGHT,UNCAUGHT,UNCAUGHT,CAUGHT,CAUGHT,UNCAUGHT
+put_transfer_ownership_deadline_integrity,UNCAUGHT,UNCAUGHT,UNCAUGHT,UNCAUGHT,UNCAUGHT,UNCAUGHT,UNCAUGHT

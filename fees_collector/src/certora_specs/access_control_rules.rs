@@ -206,6 +206,15 @@ pub fn future_address_cant_become_none_access_control(e: Env) {
     cvlr_assert!(future_address_after.is_some());
 }
 
+#[rule]
+fn TEST_TRANSFER_2(e: Env) {
+    let acc_ctrl = unsafe { &mut *&raw mut ACCESS_CONTROL }.as_ref().unwrap();
+    let role = nondet_role();
+    let value = nondet();
+    acc_ctrl.put_transfer_ownership_deadline(&role, value);
+    cvlr_satisfy!(true);
+}
+
 /**
  *  RULE: Deadline changed to nonzero => commit or put_transfer_deadline called
  *  Tested: Yes
